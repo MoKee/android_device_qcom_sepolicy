@@ -96,6 +96,7 @@ BOARD_SEPOLICY_UNION += \
        platform_app.te \
        dtsconfigurator.te \
        vold.te \
+       net.te \
        usf.te
 
 -include device/qcom/sepolicy/$(TARGET_BOARD_PLATFORM)/Android.mk
