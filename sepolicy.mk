@@ -48,4 +48,4 @@ else
     endif
 endif
 
--include device/lineage/sepolicy/qcom/sepolicy.mk
+-include device/mokee/sepolicy/qcom/sepolicy.mk
