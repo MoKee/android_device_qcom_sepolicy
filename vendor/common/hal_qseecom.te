@@ -1,4 +1,4 @@
-# Copyright (c) 2017, The Linux Foundation. All rights reserved.
+# Copyright (c) 2019, The Linux Foundation. All rights reserved.
 #
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
@@ -25,36 +25,26 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-typeattribute dataservice_app mlstrustedsubject;
-typeattribute dataservice_app coredomain;
-app_domain(dataservice_app)
-net_domain(dataservice_app)
+#define the domain
+type hal_qseecom_default, domain;
+hal_server_domain(hal_qseecom_default, hal_qseecom)
+type hal_qseecom_default_exec, exec_type, file_type, vendor_file_type;
 
-add_service(dataservice_app, cne_service)
-add_service(dataservice_app, uce_service)
-add_service(dataservice_app, dpmservice)
+init_daemon_domain(hal_qseecom_default)
 
-allow dataservice_app {
-    app_api_service
-    system_api_service
-    audioserver_service
-    radio_service
-}:service_manager find;
+#Allow hal_qseecom client domain apps to find hwservice
+binder_call(hal_qseecom_client, hal_qseecom_server)
+binder_call(hal_qseecom_server, hal_qseecom_client)
 
-allow dataservice_app radio_data_file:dir create_dir_perms;
-allow dataservice_app radio_data_file:{ file lnk_file } create_file_perms;
-allow dataservice_app dpmd_socket:sock_file write;
-allow dataservice_app dpmd_data_file:dir rw_dir_perms;
-allow dataservice_app dpmd_data_file:file create_file_perms;
+#allow the service to be added to hwservice list
+hal_attribute_hwservice(hal_qseecom, hal_qseecom_hwservice)
 
-#don't audit /proc/<pid>/stat denials
-dontaudit dataservice_app domain:dir r_dir_perms;
+#allow access to hal_allocator
+hal_client_domain(hal_qseecom_default, hal_allocator)
 
-#allow dpmservice to get running time for apps
-# r_dir_file(dataservice_app, appdomain)
+#allow access to ion device
+allow hal_qseecom_default ion_device:chr_file rw_file_perms;
 
-allow dataservice_app self:socket create_socket_perms;
-allowxperm dataservice_app self:socket ioctl msm_sock_ipc_ioctls_system;
-unix_socket_connect(dataservice_app,dpmd,dpmd);
-hwbinder_use(dataservice_app)
-set_prop(dataservice_app, persist_dpm_prop)
+#Allow access to firmware
+r_dir_file(hal_qseecom_default, firmware_file);
+
