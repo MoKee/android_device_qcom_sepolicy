@@ -25,25 +25,50 @@
 # OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN
 # IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
-# sec_nvm service
-type sec_nvm, domain;
+#Policy for mdm_helper
+#mdm_helper - mdm_helper domain
+type mdm_helper, domain;
+type mdm_helper_exec, exec_type, vendor_file_type, file_type;
+init_daemon_domain(mdm_helper);
 
-type sec_nvm_exec, exec_type, vendor_file_type, file_type;
+#block_suspend capability is needed by kickstart(ks)
+wakelock_use(mdm_helper)
 
-init_daemon_domain(sec_nvm)
-allow sec_nvm ion_device:chr_file rw_file_perms;
-allow sec_nvm skp_device:chr_file { getattr rw_file_perms };
+#Needed to power on the peripheral
+allow mdm_helper ssr_device:chr_file r_file_perms;
 
-allow sec_nvm mnt_vendor_file:dir search;
-allow sec_nvm persist_secnvm_file:dir rw_dir_perms;
-allow sec_nvm persist_secnvm_file:file create_file_perms;
+#Needed to access the esoc device to control the mdm
+allow mdm_helper esoc_device:dir r_dir_perms;
+allow mdm_helper esoc_device:chr_file rw_file_perms;
 
-allow sec_nvm sysfs_scsi_host:file rw_file_perms;
+#Needed in order to run kickstart
+allow mdm_helper vendor_shell_exec:file rx_file_perms;
+allow mdm_helper mdm_helper_exec :file x_file_perms;
 
-# Allow access to spss_utils device
-allow sec_nvm spss_utils_device:chr_file rw_file_perms;
+#Rampdump config
+#
+# User variant
+#   Probe for write access to vendor tombstones as the
+#   presense of tombstones on subsystem does not correlate
+#   to Android user/userdebug config
+allow mdm_helper vendor_tombstone_data_file:dir r_dir_perms;
+dontaudit mdm_helper vendor_tombstone_data_file:dir write;
+# Userdebug/eng variant
+userdebug_or_eng(`
+allow mdm_helper vendor_tombstone_data_file:dir create_dir_perms;
+allow mdm_helper vendor_tombstone_data_file:file create_file_perms;
+')
+#Ramdump config END
 
-allow sec_nvm spcom_device:chr_file { getattr rw_file_perms };
-allow sec_nvm sp_ssr_device:chr_file rw_file_perms;
-set_prop(sec_nvm, spcomlib_prop)
-allow sec_nvm sec_nvm_device:chr_file rw_file_perms;
+#Needed to kill its own forked process on efs sync
+allow mdm_helper self:capability kill;
+
+#Needed by ks in order to access the efs sync partitions.
+allow mdm_helper block_device:dir r_dir_perms;
+allow mdm_helper efs_boot_dev:blk_file rw_file_perms;
+
+#Needed in order to access the firmware partition
+r_dir_file(mdm_helper, firmware_file)
+
+#Needed to allow boot over PCIe
+allow mdm_helper mhi_device:chr_file rw_file_perms;
